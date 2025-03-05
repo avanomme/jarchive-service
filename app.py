@@ -81,7 +81,7 @@ def get_clues(
         query += " AND airdate <= %s"
         params.append(max_date)
     
-    query += " ORDER BY id LIMIT 100 OFFSET %s"
+    query += " ORDER BY clues.id LIMIT 100 OFFSET %s"
     params.append(offset)
     
     cursor.execute(query, params)
@@ -100,10 +100,10 @@ def get_categories(count: int = Query(1, ge=1, le=100), offset: int = Query(0, g
     
     cursor.execute(
         """
-        SELECT id, title, 
+        SELECT categories.id, categories.title, 
         (SELECT COUNT(*) FROM clues WHERE clues.category_id = categories.id) as clues_count 
         FROM categories 
-        ORDER BY id
+        ORDER BY categories.id
         LIMIT %s OFFSET %s
         """,
         (count, offset)
@@ -124,7 +124,7 @@ def get_category(category_id: int):
     
     # Get category
     cursor.execute(
-        "SELECT id, title FROM categories WHERE id = %s",
+        "SELECT categories.id, categories.title FROM categories WHERE categories.id = %s",
         (category_id,)
     )
     category = cursor.fetchone()
@@ -134,14 +134,14 @@ def get_category(category_id: int):
     
     # Get clues for this category
     cursor.execute(
-        "SELECT * FROM clues WHERE category_id = %s AND invalid_count < 5",
+        "SELECT * FROM clues WHERE clues.category_id = %s AND clues.invalid_count < 5",
         (category_id,)
     )
     clues = cursor.fetchall()
     
     # Get count of clues
     cursor.execute(
-        "SELECT COUNT(*) as count FROM clues WHERE category_id = %s AND invalid_count < 5",
+        "SELECT COUNT(*) as count FROM clues WHERE clues.category_id = %s AND clues.invalid_count < 5",
         (category_id,)
     )
     count = cursor.fetchone()["count"]
@@ -161,7 +161,7 @@ def get_final(count: int = Query(1, ge=1, le=100)):
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
     cursor.execute(
-        "SELECT * FROM clues WHERE value IS NULL ORDER BY RANDOM() LIMIT %s",
+        "SELECT * FROM clues WHERE clues.value IS NULL ORDER BY RANDOM() LIMIT %s",
         (count,)
     )
     clues = cursor.fetchall()
@@ -181,7 +181,7 @@ def mark_invalid(request: InvalidRequest):
     cursor = conn.cursor()
     
     cursor.execute(
-        "UPDATE clues SET invalid_count = invalid_count + 1 WHERE id = %s RETURNING id, invalid_count",
+        "UPDATE clues SET invalid_count = invalid_count + 1 WHERE clues.id = %s RETURNING clues.id, clues.invalid_count",
         (request.id,)
     )
     result = cursor.fetchone()
