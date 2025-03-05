@@ -1,0 +1,25 @@
+version: "3"
+services:
+  db:
+    image: postgres:14
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: password
+      POSTGRES_USER: postgres
+      POSTGRES_DB: jservice_development
+
+  web:
+    build: .
+    volumes:
+      - .:/app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://postgres:password@db:5432/jservice_development
+      RAILS_ENV: development
+
+volumes:
+  postgres_data:
