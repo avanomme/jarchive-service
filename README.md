@@ -1,77 +1,56 @@
-# jService API
+# jService API (Python Version)
 
-A Ruby on Rails API service that provides access to Jeopardy! game data. This project is part of CS3130 coursework.
+A lightweight Python implementation of the jService API using FastAPI.
 
-## Features
+## Local Setup
 
-- RESTful API endpoints for Jeopardy! clues and categories
-- API key authentication
-- PostgreSQL database with full-text search capabilities
-- Docker support for easy deployment
-
-## Prerequisites
-
-- Ruby 3.4.1
-- PostgreSQL
-- Docker (optional)
-
-## Setup
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/avanomme/3130-jservice.git
-cd 3130-jservice
-```
-
+1. Clone the repository
 2. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+3. Set up your PostgreSQL database and import the jService data
+4. Run the API:
+   ```
+   uvicorn app:app --reload
+   ```
 
-```bash
-bundle install
-```
+## Environment Variables
 
-3. Set up the database:
+- `DATABASE_URL`: PostgreSQL connection string
+- `PORT`: Port to run the server on (default: 8000)
 
-```bash
-bundle exec rails db:create db:migrate
-```
+## API Endpoints
 
-4. Generate an API key:
+- `/api/random?count=1` - Get random clues
+- `/api/clues?value=200&category=11&min_date=...&max_date=...&offset=0` - Get clues with filters
+- `/api/categories?count=5&offset=0` - Get categories with pagination
+- `/api/category/123` - Get a specific category with its clues
+- `/api/final?count=1` - Get random final jeopardy clues
+- `/api/invalid` - Mark a clue as invalid (POST request with `{"id": 123}`)
 
-```bash
-bundle exec rake "api_keys:generate[Your Key Name]"
-```
+## Deployment
 
-5. Start the server:
+This application can be easily deployed to various platforms:
 
-```bash
-bundle exec rails server
-```
+### Render
 
-## Docker Setup
+1. Create a new Web Service
+2. Connect your GitHub repository
+3. Set the build command: `pip install -r requirements.txt`
+4. Set the start command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+5. Add environment variables (DATABASE_URL)
 
-1. Build and start the containers:
+### Railway
 
-```bash
-docker-compose up --build
-```
+1. Create a new project
+2. Connect your GitHub repository
+3. Add environment variables (DATABASE_URL)
+4. Railway will detect the Procfile and automatically deploy
 
-## API Documentation
+### Heroku
 
-The API requires authentication using an API key. Include your API key in the request header:
-
-```
-Authorization: Bearer your-api-key-here
-```
-
-### Available Endpoints
-
-- `GET /api/v1/categories` - List all categories
-- `GET /api/v1/categories/:id` - Get a specific category
-- `GET /api/v1/clues` - List all clues
-- `GET /api/v1/clues/:id` - Get a specific clue
-- `GET /api/v1/random` - Get a random clue
-
-## License
-
-This project is private and intended for CS3130 coursework only.
+1. Create a new app
+2. Connect your GitHub repository
+3. Add the PostgreSQL add-on
+4. Deploy

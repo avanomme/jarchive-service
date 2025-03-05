@@ -10,9 +10,10 @@
 # Ignore all logfiles and tempfiles
 /log/*
 !/log/.keep
-/tmp
+/tmp/*
+!/tmp/.keep
 
-# Ignore pidfiles
+# Ignore pidfiles, but keep the directory
 /tmp/pids/*
 !/tmp/pids/
 !/tmp/pids/.keep
@@ -24,25 +25,36 @@
 !/tmp/storage/
 !/tmp/storage/.keep
 
-# Ignore master key for decrypting credentials
+# Ignore master key for decrypting credentials and more
 /config/master.key
 
 # Ignore application secrets
 /config/application.yml
+
+# Ignore environment files
+.env
+.env.*
 
 # Ignore node modules
 /node_modules
 
 # Ignore public assets
 /public/assets
+/public/packs
+/public/packs-test
 
 # Ignore database files
 /db/*.sqlite3
 /db/*.sqlite3-journal
 
-# Ignore environment files
-.env
-.env.*
+# Ignore yarn files
+/yarn-error.log
+yarn-debug.log*
+.yarn-integrity
+
+# Ignore coverage reports
+/coverage/*
+!/coverage/.last_run.json
 
 # Ignore macOS system files
 .DS_Store
