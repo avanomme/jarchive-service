@@ -7,6 +7,8 @@ import random
 from typing import List, Optional
 import json
 from pydantic import BaseModel
+import importlib.util
+import sys
 
 app = FastAPI(title="jService API")
 
@@ -42,6 +44,30 @@ def check_db_initialized():
     except Exception as e:
         print(f"Database connection error: {e}")
         return False
+
+# Initialize database with sample data if needed
+def init_db_if_needed():
+    if not check_db_initialized():
+        print("Database not initialized. Attempting to create tables and sample data...")
+        try:
+            # Import setup_db module and run initialization
+            spec = importlib.util.spec_from_file_location("setup_db", "setup_db.py")
+            setup_db = importlib.util.module_from_spec(spec)
+            sys.modules["setup_db"] = setup_db
+            spec.loader.exec_module(setup_db)
+            
+            # Run database setup
+            setup_db.create_tables()
+            setup_db.insert_sample_data()
+            print("Database initialization completed successfully.")
+            return True
+        except Exception as e:
+            print(f"Error initializing database: {e}")
+            return False
+    return True
+
+# Initialize database on startup
+init_db_if_needed()
 
 # API Routes
 
@@ -153,6 +179,16 @@ def get_category_query(id: int):
     try:
         return get_category_data(id)
     except psycopg2.errors.UndefinedTable:
+        # Try to initialize the database
+        init_success = init_db_if_needed()
+        if init_success:
+            # Try again after initialization
+            try:
+                return get_category_data(id)
+            except:
+                # If still failing, return mock data
+                pass
+        
         # Return a mock response for testing when database isn't initialized
         return {
             "id": id,
@@ -173,6 +209,16 @@ def get_category(category_id: int):
     try:
         return get_category_data(category_id)
     except psycopg2.errors.UndefinedTable:
+        # Try to initialize the database
+        init_success = init_db_if_needed()
+        if init_success:
+            # Try again after initialization
+            try:
+                return get_category_data(category_id)
+            except:
+                # If still failing, return mock data
+                pass
+        
         # Return a mock response for testing when database isn't initialized
         return {
             "id": category_id,
