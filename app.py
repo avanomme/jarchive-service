@@ -116,9 +116,19 @@ def get_categories(count: int = Query(1, ge=1, le=100), offset: int = Query(0, g
     
     return list(categories)
 
+# This endpoint matches the original jService format expected by the Flutter app
+@app.get("/api/category", response_model=dict)
+def get_category_query(id: int):
+    """Get a specific category by ID as a query parameter - matches original jService format"""
+    return get_category_data(id)
+
 @app.get("/api/category/{category_id}", response_model=dict)
 def get_category(category_id: int):
     """Get a specific category by ID with its clues"""
+    return get_category_data(category_id)
+
+def get_category_data(category_id: int):
+    """Common function to get category data by ID"""
     conn = get_db_connection()
     cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
     
@@ -134,10 +144,32 @@ def get_category(category_id: int):
     
     # Get clues for this category
     cursor.execute(
-        "SELECT * FROM clues WHERE clues.category_id = %s AND clues.invalid_count < 5",
+        """
+        SELECT clues.id, clues.answer, clues.question, clues.value, 
+        clues.airdate, clues.category_id, clues.game_id, clues.invalid_count 
+        FROM clues 
+        WHERE clues.category_id = %s AND clues.invalid_count < 5
+        """,
         (category_id,)
     )
     clues = cursor.fetchall()
+    
+    # Ensure we have at least 4 clues with distinct answers for the multiple choice question
+    if len(clues) < 4:
+        # Get more clues from other categories if needed
+        cursor.execute(
+            """
+            SELECT clues.id, clues.answer, clues.question, clues.value, 
+            clues.airdate, clues.category_id, clues.game_id, clues.invalid_count 
+            FROM clues 
+            WHERE clues.invalid_count < 5 AND clues.category_id != %s
+            ORDER BY RANDOM() 
+            LIMIT 10
+            """,
+            (category_id,)
+        )
+        additional_clues = cursor.fetchall()
+        clues.extend(additional_clues)
     
     # Get count of clues
     cursor.execute(
@@ -149,8 +181,38 @@ def get_category(category_id: int):
     cursor.close()
     conn.close()
     
+    # Format the response exactly as expected by the Flutter app
     category["clues_count"] = count
     category["clues"] = list(clues)
+    
+    # Print debug information - will appear in the server logs
+    print(f"Category structure: {list(category.keys())}")
+    if clues and len(clues) > 0:
+        print(f"Clue structure: {list(clues[0].keys())}")
+    
+    # Ensure we have at least 4 clues with distinct answers for the Flutter app
+    distinct_answers = set()
+    valid_clues = []
+    
+    for clue in category["clues"]:
+        # Ensure all clues have the expected fields
+        if "answer" not in clue or "question" not in clue:
+            print(f"Warning: Clue missing required fields: {clue}")
+            continue
+        
+        # Clean the answer text
+        answer = clue["answer"]
+        if answer and isinstance(answer, str):
+            # Add to valid clues
+            valid_clues.append(clue)
+            distinct_answers.add(answer)
+    
+    # Make sure we have enough distinct answers
+    if len(distinct_answers) < 4:
+        print(f"Error: Not enough distinct answers: {len(distinct_answers)}")
+        raise HTTPException(status_code=404, detail="Not enough distinct clues found for this category")
+    
+    category["clues"] = valid_clues
     
     return category
 
