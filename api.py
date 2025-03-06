@@ -3,12 +3,18 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import random
 import os
+from dotenv import load_dotenv
 from db_setup import Base, Category, Clue
+
+# Load environment variables
+load_dotenv()
 
 app = FastAPI()
 
 # Database setup
 database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/jservice')
+edge_config_url = os.getenv('EDGE_CONFIG')
+
 engine = create_engine(database_url)
 SessionLocal = sessionmaker(bind=engine)
 
