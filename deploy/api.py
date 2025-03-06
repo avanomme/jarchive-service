@@ -167,17 +167,48 @@ async def get_single_category(id: int):
             random.shuffle(clues)
             selected_clues = clues[:4]
             
+            # Clean and format the clues
+            formatted_clues = []
+            for clue in selected_clues:
+                # Get the question and answer
+                question = clue.get("question", "").strip()
+                answer = clue.get("answer", "").strip()
+                
+                # Remove HTML tags
+                question = re.sub(r'<[^>]+>', '', question)
+                answer = re.sub(r'<[^>]+>', '', answer)
+                
+                # Unescape HTML entities
+                question = html.unescape(question)
+                answer = html.unescape(answer)
+                
+                # Remove quotes and italics markers
+                answer = answer.replace('"', '').replace("'", "").replace("<i>", "").replace("</i>", "")
+                
+                # If question is empty but answer isn't, swap them
+                if not question and answer:
+                    question = answer
+                    # Try to extract a reasonable answer from the question
+                    answer_parts = question.split(',')
+                    if len(answer_parts) > 1:
+                        answer = answer_parts[-1].strip()
+                    else:
+                        words = question.split()
+                        if len(words) > 3:
+                            answer = ' '.join(words[-3:]).strip()
+                        else:
+                            answer = question
+                
+                formatted_clues.append({
+                    "answer": answer,
+                    "question": question
+                })
+            
             # Format the response to match what the Flutter app expects
             return {
                 "title": category["title"],
-                "clues_count": len(selected_clues),
-                "clues": [
-                    {
-                        "answer": html.unescape(clue.get("answer", "")).strip(),  # Unescape HTML entities and strip whitespace
-                        "question": html.unescape(re.sub(r'<[^>]+>', '', clue.get("question", ""))).strip()  # Remove HTML tags, unescape entities, and strip whitespace
-                    }
-                    for clue in selected_clues
-                ]
+                "clues_count": len(formatted_clues),
+                "clues": formatted_clues
             }
         else:
             raise HTTPException(status_code=404, detail="Could not find a category with enough clues")
