@@ -1,111 +1,64 @@
 # jService API
 
-A JSON API for Jeopardy trivia questions, based on the original jService created by [Steve Ottenad](https://github.com/sottenad).
+A JSON API serving Jeopardy trivia questions. This is a simplified version that serves pre-processed data from a JSON file for maximum performance.
 
-## Deployment to Render.com
+## Setup
 
-### Prerequisites
+1. Install dependencies:
 
-- A Render.com account
-- The PostgreSQL dump file (`jservice_cleaned.sql`)
-- Git installed on your computer
+```bash
+pip install -r requirements.txt
+```
 
-### Steps
+2. Generate the JSON data (optional, only if you want to rebuild from source):
 
-1. Push this repository to GitHub (or any Git provider that Render supports)
+```bash
+python transform_data.py
+```
 
-2. Log into Render.com and select "Blueprint" from the dashboard
+3. Run the API server:
 
-3. Connect your GitHub repository and follow the prompts to deploy the blueprint
-
-4. After deployment is complete, connect to the PostgreSQL database:
-   ```
-   PGPASSWORD=your_password psql -h your-db-host.render.com -U your_username your_database < jservice_cleaned.sql
-   ```
-
-### Database Initialization
-
-If you're experiencing a "Database not initialized" error in the API, you have two options:
-
-1. **Import the full jService database:**
-
-   Connect to your Render PostgreSQL database and import the database dump:
-
-   ```bash
-   PGPASSWORD=your_password psql -h your-db-host.render.com -U your_username your_database < jservice_cleaned.sql
-   ```
-
-2. **Use sample data for testing:**
-
-   Run the setup script to create tables and populate sample data:
-
-   ```bash
-   python setup_db.py
-   ```
-
-### Troubleshooting
-
-If you encounter a 500 Internal Server Error with "relation does not exist" in the logs:
-
-1. Make sure you've imported the database
-2. Check the database connection string in your environment variables
-3. Run the setup script to create tables with sample data
+```bash
+python api.py
+```
 
 ## API Endpoints
 
-The API provides the following endpoints:
+- `/api/category/{id}` - Get a specific category and all its clues
+- `/api/random` - Get a random category with its clues
+- `/api/categories` - Get all categories
 
-- `GET /api/random` - Get a random clue
-- `GET /api/clues` - Get clues with optional filters
-- `GET /api/categories` - Get categories with pagination
-- `GET /api/category?id={id}` - Get a specific category by ID (query parameter format for Flutter app)
-- `GET /api/category/{id}` - Get a specific category by ID
-- `GET /api/final` - Get random final jeopardy clues
-- `POST /api/invalid` - Mark a clue as invalid
+## Data Format
 
-## Local Development
+Categories are returned in this format:
 
-### Setup
+```json
+{
+  "id": 1,
+  "title": "Category Title",
+  "created_at": "2024-03-06T00:00:00.000Z",
+  "updated_at": "2024-03-06T00:00:00.000Z",
+  "clues_count": 25,
+  "clues": [
+    {
+      "id": 1,
+      "answer": "Answer text",
+      "question": "Question text",
+      "value": 200,
+      "airdate": "1984-09-10T00:00:00.000Z",
+      "category_id": 1,
+      "game_id": 1,
+      "invalid_count": null
+    },
+    ...
+  ]
+}
+```
 
-1. Create a virtual environment:
+## Deployment
 
-   ```
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+The API is deployed on Render.com. The deployment configuration is in `render.yaml`.
 
-2. Install the dependencies:
+## Data Source
 
-   ```
-   pip install -r requirements.txt
-   ```
-
-3. Create a PostgreSQL database:
-
-   ```
-   createdb jservice
-   ```
-
-4. Import the database (optional - or use setup_db.py for sample data):
-
-   ```
-   psql jservice < jservice_cleaned.sql
-   ```
-
-5. Initialize the database with sample data if needed:
-
-   ```
-   python setup_db.py
-   ```
-
-6. Run the application:
-   ```
-   uvicorn app:app --reload
-   ```
-
-The API will be available at http://localhost:8000
-
-## Notes
-
-- The categories have been cleaned from the original database to remove Alex Trebek's commentary.
-- For categories where the actual title couldn't be clearly determined, the title was set to "UNKNOWN".
+The data comes from `combined_season1-40.tsv`, which contains Jeopardy! questions from seasons 1-40.
