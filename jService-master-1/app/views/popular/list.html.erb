@@ -1,0 +1,33 @@
+<%= render "layouts/menu" %>
+<%- model_class = Clue -%>
+<ol class="breadcrumb">
+  <li><%= link_to "Popular Categories", popular_path %></li>
+  <li><%= link_to @category.title.titleize %></li>
+</ol>
+
+<div class="container">
+<h3>Clues for: <%= @category.title.titleize %></h3>
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th><%= model_class.human_attribute_name(:question) %></th>
+      <th><%= model_class.human_attribute_name(:answer) %></th>
+
+      <th><%= model_class.human_attribute_name(:value) %></th>
+      <th><%= model_class.human_attribute_name(:airdate) %></th>
+
+    </tr>
+  </thead>
+  <tbody>
+    <% @list.each do |clue| %>
+      <tr>
+        <td><%= clue.question %></td>
+        <td><%= clue.answer %></td>
+
+        <td><%= clue.value %></td>
+        <td><%= clue.airdate.to_time.strftime('%B %e, %Y') %></td>
+              </tr>
+    <% end %>
+  </tbody>
+</table>
+</div>

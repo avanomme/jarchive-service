@@ -115,3 +115,11 @@ db/
 # Environment variables
 .env.local
 .env.*.local
+
+# Project specific
+jarchive/
+json_seasons/
+seasons/
+*.tsv
+*.db
+!jarchive/db.db
