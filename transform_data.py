@@ -1,6 +1,6 @@
 import csv
 import json
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from collections import defaultdict
 import random
 
@@ -8,7 +8,7 @@ def transform_tsv_to_json():
     # Store categories with their clues
     categories = defaultdict(list)
     category_ids = {}
-    current_date = datetime.now(UTC).isoformat()
+    current_date = datetime.now(timezone.utc).isoformat()
     clue_counter = 1  # For generating unique clue IDs
     category_counter = 1  # For sequential category IDs
     
