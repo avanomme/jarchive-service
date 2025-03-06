@@ -20,6 +20,5 @@
   ],
   "env": {
     "PYTHONPATH": "."
-  },
-  "buildCommand": "python db_setup.py && python vercel_app.py"
+  }
 }
