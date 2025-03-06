@@ -4,4 +4,5 @@ python-multipart==0.0.6
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.27
 python-dotenv==1.0.0
-vercel==0.17.0 
+vercel==0.17.0
+pydantic==2.6.1 

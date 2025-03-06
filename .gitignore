@@ -107,3 +107,4 @@ jservice_data.json
 *.log
 tmp/
 db/
+.vercel
