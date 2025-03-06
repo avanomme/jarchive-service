@@ -1,47 +1,96 @@
 from fastapi import FastAPI, HTTPException
-import json
-from typing import Dict, List, Optional
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import random
+import os
+from db_setup import Base, Category, Clue
 
 app = FastAPI()
 
-# Load data once at startup
-with open('jservice_data.json', 'r') as f:
-    data = json.load(f)
+# Database setup
+database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/jservice')
+engine = create_engine(database_url)
+SessionLocal = sessionmaker(bind=engine)
 
-# Create efficient lookup structures
-categories_by_id: Dict[int, dict] = {cat['id']: cat for cat in data['categories']}
-clues_by_category: Dict[int, List[dict]] = {}
-
-# Organize clues by category_id for efficient lookup
-for clue in data['all_clues']:
-    if clue['category_id'] not in clues_by_category:
-        clues_by_category[clue['category_id']] = []
-    clues_by_category[clue['category_id']].append(clue)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 @app.get("/api/category/{category_id}")
 async def get_category(category_id: int):
+    db = SessionLocal()
     try:
-        category_id = int(category_id)
-    except ValueError:
-        raise HTTPException(status_code=400, detail="Category ID must be a number")
+        category = db.query(Category).filter(Category.id == category_id).first()
+        if not category:
+            raise HTTPException(status_code=404, detail="Category not found")
         
-    if category_id not in categories_by_id:
-        raise HTTPException(status_code=404, detail="Category not found")
-    
-    category = categories_by_id[category_id].copy()
-    category['clues'] = clues_by_category.get(category_id, [])
-    return category
+        # Get all clues for this category
+        clues = db.query(Clue).filter(Clue.category_id == category_id).all()
+        
+        # Convert to dictionary format
+        result = {
+            "id": category.id,
+            "title": category.title,
+            "created_at": category.created_at.isoformat(),
+            "updated_at": category.updated_at.isoformat(),
+            "clues_count": category.clues_count,
+            "clues": [
+                {
+                    "id": clue.id,
+                    "answer": clue.answer,
+                    "question": clue.question,
+                    "value": clue.value,
+                    "airdate": clue.airdate.isoformat(),
+                    "category_id": clue.category_id,
+                    "game_id": clue.game_id,
+                    "invalid_count": clue.invalid_count,
+                    "created_at": clue.created_at.isoformat(),
+                    "updated_at": clue.updated_at.isoformat()
+                }
+                for clue in clues
+            ]
+        }
+        return result
+    finally:
+        db.close()
 
 @app.get("/api/random")
 async def get_random_category():
-    category_id = random.choice(list(categories_by_id.keys()))
-    return await get_category(category_id)
+    db = SessionLocal()
+    try:
+        # Get a random category ID
+        category = db.query(Category).order_by(db.func.random()).first()
+        if not category:
+            raise HTTPException(status_code=404, detail="No categories found")
+        
+        return await get_category(category.id)
+    finally:
+        db.close()
 
 @app.get("/api/categories")
 async def get_categories():
-    return {"categories": list(categories_by_id.values())}
+    db = SessionLocal()
+    try:
+        categories = db.query(Category).all()
+        return {
+            "categories": [
+                {
+                    "id": cat.id,
+                    "title": cat.title,
+                    "created_at": cat.created_at.isoformat(),
+                    "updated_at": cat.updated_at.isoformat(),
+                    "clues_count": cat.clues_count
+                }
+                for cat in categories
+            ]
+        }
+    finally:
+        db.close()
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)  # Changed port to 8001 
+    port = int(os.getenv('PORT', 8001))
+    uvicorn.run(app, host="0.0.0.0", port=port) 
