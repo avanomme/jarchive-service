@@ -5,6 +5,11 @@ import os
 import csv
 from datetime import datetime, timezone
 from dotenv import load_dotenv
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -38,11 +43,15 @@ class Clue(Base):
     category = relationship("Category", back_populates="clues")
 
 def setup_database(database_url):
+    logger.info("Starting database setup...")
+    
     # Create engine and tables
     engine = create_engine(database_url)
+    logger.info("Database engine created")
     
     # Create tables if they don't exist
     Base.metadata.create_all(engine)
+    logger.info("Database tables created")
     
     # Create session
     Session = sessionmaker(bind=engine)
@@ -52,9 +61,10 @@ def setup_database(database_url):
         # Check if we already have data
         category_count = session.query(Category).count()
         if category_count > 0:
-            print("Database already populated, skipping import.")
+            logger.info(f"Database already populated with {category_count} categories, skipping import.")
             return
         
+        logger.info("Starting data import...")
         # Store categories with their clues
         categories = {}
         category_counter = 1
@@ -80,6 +90,7 @@ def setup_database(database_url):
         
         # Commit categories to get their IDs
         session.commit()
+        logger.info(f"Created {len(categories)} categories")
         
         # Second pass: Create clues and update category counts
         category_clue_counts = {}
@@ -114,6 +125,7 @@ def setup_database(database_url):
                 # Commit every 1000 clues to avoid memory issues
                 if clue_counter % 1000 == 0:
                     session.commit()
+                    logger.info(f"Imported {clue_counter} clues")
         
         # Update category clue counts and remove categories with less than 5 clues
         for category in categories.values():
@@ -125,10 +137,10 @@ def setup_database(database_url):
         
         # Final commit
         session.commit()
-        print("Database setup completed successfully!")
+        logger.info(f"Database setup completed successfully! Imported {len(categories)} categories and {clue_counter} clues")
         
     except Exception as e:
-        print(f"Error during database setup: {str(e)}")
+        logger.error(f"Error during database setup: {str(e)}")
         session.rollback()
         raise
     finally:
