@@ -104,6 +104,7 @@ Thumbs.db
 
 # Project specific
 jservice_data.json
+combined_season1-40.tsv
 *.log
 tmp/
 db/
