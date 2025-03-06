@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
 from datetime import datetime
@@ -6,6 +6,8 @@ from supabase import create_client, Client
 import os
 from dotenv import load_dotenv
 import random
+import re  # Add import for regular expressions
+import html  # Add import for HTML entity handling
 
 # Load environment variables
 load_dotenv()
@@ -22,6 +24,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Protection bypass middleware
+@app.middleware("http")
+async def protection_bypass_middleware(request: Request, call_next):
+    # Check for protection bypass header
+    protection_bypass = request.headers.get("x-vercel-protection-bypass")
+    if protection_bypass == "jserviceautobypasssecretcodekeys":
+        # If bypass header is present, proceed with the request
+        response = await call_next(request)
+        return response
+    else:
+        # If no bypass header, return 403 Forbidden
+        return Response(status_code=403, content="Authentication required")
+
 # Initialize Supabase client
 supabase_url = os.getenv("SUPABASE_URL")
 supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
@@ -37,7 +52,24 @@ async def get_random_clues(count: Optional[int] = Query(1, le=100)):
         
         # Randomize the results
         random.shuffle(clues)
-        return clues[:count]
+        clues = clues[:count]
+        
+        # Transform the data to match the expected format
+        if clues:
+            first_clue = clues[0]
+            category = first_clue['categories']
+            return {
+                "title": category['title'],
+                "clues_count": len(clues),
+                "clues": [
+                    {
+                        "answer": clue['answer'],
+                        "question": clue['question']
+                    }
+                    for clue in clues
+                ]
+            }
+        return {"title": "No Category", "clues_count": 0, "clues": []}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -101,27 +133,57 @@ async def get_categories(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/category")
-async def get_single_category(category_id: int):
+async def get_single_category(id: int):
     """Get a single category with all its clues."""
     try:
-        # Get category with all its clues
-        response = supabase.table("categories").select("*, clues(*)").eq("id", category_id).execute()
+        # Get a random category ID from categories with enough clues
+        category_response = supabase.table("categories") \
+            .select("id") \
+            .gte("clues_count", 4) \
+            .execute()
         
+        if not category_response.data:
+            raise HTTPException(status_code=404, detail="No categories found with enough clues")
+        
+        # Select a random category ID
+        random_category = random.choice(category_response.data)
+        category_id = random_category["id"]
+        
+        # Get the specific category and its clues
+        response = supabase.table("categories") \
+            .select("*, clues(*)") \
+            .eq("id", category_id) \
+            .single() \
+            .execute()
+            
         if not response.data:
             raise HTTPException(status_code=404, detail="Category not found")
             
-        category = response.data[0]
-        
-        # Remove created_at and updated_at from clues
-        if "clues" in category:
-            for clue in category["clues"]:
-                clue.pop("created_at", None)
-                clue.pop("updated_at", None)
-                
-        return category
+        category = response.data
+        clues = category.get("clues", [])
+            
+        if clues and len(clues) >= 4:
+            # Randomly select 4 clues from this category
+            random.shuffle(clues)
+            selected_clues = clues[:4]
+            
+            # Format the response to match what the Flutter app expects
+            return {
+                "title": category["title"],
+                "clues_count": len(selected_clues),
+                "clues": [
+                    {
+                        "answer": html.unescape(clue.get("answer", "")).strip(),  # Unescape HTML entities and strip whitespace
+                        "question": html.unescape(re.sub(r'<[^>]+>', '', clue.get("question", ""))).strip()  # Remove HTML tags, unescape entities, and strip whitespace
+                    }
+                    for clue in selected_clues
+                ]
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Could not find a category with enough clues")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+        
 @app.post("/api/mark_invalid")
 async def mark_clue_invalid(clue_id: int):
     """Mark a clue as invalid by incrementing its invalid_count."""
