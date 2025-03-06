@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import random
@@ -10,6 +11,15 @@ from db_setup import Base, Category, Clue
 load_dotenv()
 
 app = FastAPI()
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Database setup
 database_url = os.getenv('DATABASE_URL', 'postgresql://postgres:postgres@localhost:5432/jservice')
