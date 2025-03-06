@@ -65,6 +65,7 @@ yarn-debug.log*
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 .Python
 env/
 build/
@@ -78,6 +79,7 @@ lib64/
 parts/
 sdist/
 var/
+wheels/
 *.egg-info/
 .installed.cfg
 *.egg
@@ -109,3 +111,7 @@ combined_season1-40.tsv
 tmp/
 db/
 .vercel
+
+# Environment variables
+.env.local
+.env.*.local

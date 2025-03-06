@@ -4,4 +4,7 @@ python-multipart==0.0.6
 psycopg2-binary==2.9.9
 sqlalchemy==2.0.27
 python-dotenv==1.0.0
-pydantic==2.6.1 
+pydantic==2.6.1
+gdown==5.1.0
+supabase==1.2.0
+httpx==0.24.1 
